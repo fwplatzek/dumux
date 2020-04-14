@@ -26,6 +26,7 @@
 
 #include <array>
 #include <optional>
+#include <type_traits>
 
 #include <dumux/common/math.hh>
 #include <dumux/common/exceptions.hh>
@@ -80,7 +81,7 @@ class NavierStokesFluxVariablesImpl<TypeTag, DiscretizationMethod::staggered>
     using SubControlVolumeFace = typename FVElementGeometry::SubControlVolumeFace;
     using CellCenterPrimaryVariables = GetPropType<TypeTag, Properties::CellCenterPrimaryVariables>;
     using FacePrimaryVariables = GetPropType<TypeTag, Properties::FacePrimaryVariables>;
-    using BoundaryTypes = GetPropType<TypeTag, Properties::BoundaryTypes>;
+    using BoundaryTypes = std::decay_t<decltype(std::declval<Problem>().boundaryTypes(std::declval<Element>(), std::declval<SubControlVolumeFace>()))>;
     using VelocityGradients = StaggeredVelocityGradients<Scalar, GridGeometry, BoundaryTypes, Indices>;
 
     static constexpr bool normalizePressure = getPropValue<TypeTag, Properties::NormalizePressure>();
@@ -493,7 +494,7 @@ private:
             else
             {
                 // Create a boundaryTypes object. Get the boundary conditions. We sample the type of BC at the center of the current scvf.
-                const BoundaryTypes bcTypes = problem.boundaryTypes(element, scvf);
+                const auto bcTypes = problem.boundaryTypes(element, scvf);
 
                 if (bcTypes.isDirichlet(Indices::velocity(lateralFace.directionIndex())))
                 {

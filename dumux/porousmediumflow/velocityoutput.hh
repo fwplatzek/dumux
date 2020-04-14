@@ -67,7 +67,6 @@ class PorousMediumFlowVelocityOutput : public VelocityOutput<GridVariables>
     using ReferenceElements = Dune::ReferenceElements<typename GridView::ctype, dim>;
 
     using Problem = typename GridVolumeVariables::Problem;
-    using BoundaryTypes = typename Problem::Traits::BoundaryTypes;
     using VelocityBackend = PorousMediumFlowVelocity<GridVariables, FluxVariables>;
 
 public:

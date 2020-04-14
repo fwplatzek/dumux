@@ -29,6 +29,8 @@
 #ifndef DUMUX_FACETCOUPLING_BOX_PROPERTIES_HH
 #define DUMUX_FACETCOUPLING_BOX_PROPERTIES_HH
 
+#include <type_traits>
+
 #include <dumux/common/properties.hh>
 #include <dumux/discretization/box.hh>
 
@@ -87,10 +89,20 @@ struct FluxVariables<TypeTag, TTag::BoxFacetCouplingModel>
                                            BoxFacetCouplingUpwindScheme<GetPropType<TypeTag, Properties::GridGeometry>>>;
 };
 
-//! Per default, use the porous medium flow flux variables with the modified upwind scheme
+//! Set the default for the ElementBoundaryTypes
 template<class TypeTag>
 struct ElementBoundaryTypes<TypeTag, TTag::BoxFacetCouplingModel>
-{ using type = BoxFacetCouplingElementBoundaryTypes<GetPropType<TypeTag, Properties::BoundaryTypes>>; };
+{
+private:
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using GridGeometry = std::decay_t<decltype(std::declval<Problem>().gridGeometry())>;
+    using Element = typename GridGeometry::GridView::template Codim<0>::Entity;
+    using SubControlVolume = typename GridGeometry::SubControlVolume;
+    // BoundaryTypes is whatever the problem returns from boundaryTypes(element, scv)
+    using BoundaryTypes = std::decay_t<decltype(std::declval<Problem>().boundaryTypes(std::declval<Element>(), std::declval<SubControlVolume>()))>;
+public:
+    using type = BoxFacetCouplingElementBoundaryTypes<BoundaryTypes>;
+};
 
 //! Set the default for the grid finite volume geometry
 template<class TypeTag>

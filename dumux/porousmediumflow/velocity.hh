@@ -70,7 +70,6 @@ class PorousMediumFlowVelocity
     using ReferenceElements = Dune::ReferenceElements<typename GridView::ctype, dim>;
 
     using Problem = typename GridVolumeVariables::Problem;
-    using BoundaryTypes = typename Problem::Traits::BoundaryTypes;
 
 public:
     static constexpr int numFluidPhases = VolumeVariables::numFluidPhases();
@@ -87,7 +86,7 @@ public:
     , gridVariables_(gridVariables)
     {
         // set the number of scvs the vertices are connected to
-        if (isBox && dim > 1)
+        if constexpr (isBox && dim > 1)
         {
             // resize to the number of vertices of the grid
             cellNum_.assign(gridGeometry_.gridView().size(dim), 0);
@@ -115,7 +114,7 @@ public:
         // the upwind term to be used for the volume flux evaluation
         auto upwindTerm = [phaseIdx](const auto& volVars) { return volVars.mobility(phaseIdx); };
 
-        if(isBox && dim == 1)
+        if constexpr (isBox && dim == 1)
         {
             Velocity tmpVelocity(0.0);
             tmpVelocity = (geometry.corner(1) - geometry.corner(0));
@@ -149,7 +148,7 @@ public:
         const auto& localPos = referenceElement.position(0, 0);
         const auto jacobianT2 = geometry.jacobianTransposed(localPos);
 
-        if(isBox)
+        if constexpr (isBox)
         {
             using ScvVelocities = Dune::BlockVector<Velocity>;
             ScvVelocities scvVelocities(fvGeometry.numScv());
@@ -258,7 +257,7 @@ public:
                 }
                 else
                 {
-                    auto bcTypes = problemBoundaryTypes_(element, scvf);
+                    auto bcTypes = problem_.boundaryTypes(element, scvf);
                     if (bcTypes.hasOnlyDirichlet())
                     {
                         FluxVariables fluxVars;
@@ -282,7 +281,7 @@ public:
             {
                 if (scvf.boundary())
                 {
-                    auto bcTypes = problemBoundaryTypes_(element, scvf);
+                    auto bcTypes = problem_.boundaryTypes(element, scvf);
                     if (bcTypes.hasNeumann())
                     {
                         // for stationary velocity fields we can easily compute the correct velocity
@@ -421,29 +420,6 @@ private:
     }
 
 private:
-    // The following SFINAE enable_if usage allows compilation, even if only a
-    //
-    // boundaryTypes(const Element&, const scv&)
-    //
-    // is provided in the problem file. In that case, the compiler cannot detect
-    // (without additional measures like "using...") the signature
-    //
-    // boundaryTypes(const Element&, const scvf&)
-    //
-    // in the problem base class. Therefore, calls to this method trigger a
-    // compiler error. However, that call is needed for calculating velocities
-    // if the cell-centered discretization is used. By proceeding as in the
-    // following lines, that call will only be compiled if cell-centered
-    // actually is used.
-    template <bool enable = isBox, typename std::enable_if_t<!enable, int> = 0>
-    BoundaryTypes problemBoundaryTypes_(const Element& element, const SubControlVolumeFace& scvf) const
-    { return problem_.boundaryTypes(element, scvf); }
-
-    //! we should never call this method for box models
-    template <bool enable = isBox, typename std::enable_if_t<enable, int> = 0>
-    BoundaryTypes problemBoundaryTypes_(const Element& element, const SubControlVolumeFace& scvf) const
-    { return BoundaryTypes(); }
-
     const Problem& problem_;
     const GridGeometry& gridGeometry_;
     const GridVariables& gridVariables_;

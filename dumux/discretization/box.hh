@@ -25,6 +25,8 @@
 #ifndef DUMUX_DISCRETIZTAION_BOX_HH
 #define DUMUX_DISCRETIZTAION_BOX_HH
 
+#include <type_traits>
+
 #include <dune/common/fvector.hh>
 #include <dune/geometry/multilineargeometry.hh>
 
@@ -89,7 +91,18 @@ public:
 
 //! Set the default for the ElementBoundaryTypes
 template<class TypeTag>
-struct ElementBoundaryTypes<TypeTag, TTag::BoxModel> { using type = BoxElementBoundaryTypes<GetPropType<TypeTag, Properties::BoundaryTypes>>; };
+struct ElementBoundaryTypes<TypeTag, TTag::BoxModel>
+{
+private:
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using GridGeometry = std::decay_t<decltype(std::declval<Problem>().gridGeometry())>;
+    using Element = typename GridGeometry::GridView::template Codim<0>::Entity;
+    using SubControlVolume = typename GridGeometry::SubControlVolume;
+    // BoundaryTypes is whatever the problem returns from boundaryTypes(element, scv)
+    using BoundaryTypes = std::decay_t<decltype(std::declval<Problem>().boundaryTypes(std::declval<Element>(), std::declval<SubControlVolume>()))>;
+public:
+    using type = BoxElementBoundaryTypes<BoundaryTypes>;
+};
 
 //! Set the BaseLocalResidual to BoxLocalResidual
 template<class TypeTag>

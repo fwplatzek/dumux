@@ -26,6 +26,7 @@
 
 #include <array>
 #include <optional>
+#include <type_traits>
 
 #include <dumux/common/math.hh>
 #include <dumux/common/exceptions.hh>
@@ -70,7 +71,7 @@ class StaggeredUpwindFluxVariables
     using SubControlVolumeFace = typename FVElementGeometry::SubControlVolumeFace;
     using CellCenterPrimaryVariables = GetPropType<TypeTag, Properties::CellCenterPrimaryVariables>;
     using FacePrimaryVariables = GetPropType<TypeTag, Properties::FacePrimaryVariables>;
-    using BoundaryTypes = GetPropType<TypeTag, Properties::BoundaryTypes>;
+    using BoundaryTypes = std::decay_t<decltype(std::declval<Problem>().boundaryTypes(std::declval<Element>(), std::declval<SubControlVolumeFace>()))>;
     using VelocityGradients = StaggeredVelocityGradients<Scalar, GridGeometry, BoundaryTypes, Indices>;
 
     using GlobalPosition = typename Element::Geometry::GlobalCoordinate;

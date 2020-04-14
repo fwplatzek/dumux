@@ -69,7 +69,8 @@ struct EnableGridFluxVariablesCache<TypeTag, TTag::FiniteVolumeModel> { static c
 
 //! Boundary types at a single degree of freedom
 template<class TypeTag>
-struct BoundaryTypes<TypeTag, TTag::FiniteVolumeModel> { using type = Dumux::BoundaryTypes<GetPropType<TypeTag, Properties::ModelTraits>::numEq()>; };
+struct [[deprecated("BoundaryTypes will be removed after 3.3. BoundaryTypes can be deduced from Problem.")]] BoundaryTypes<TypeTag, TTag::FiniteVolumeModel>
+{ using type = Dumux::BoundaryTypes<GetPropType<TypeTag, Properties::ModelTraits>::numEq()>; };
 
 // TODO: bundle SolutionVector, JacobianMatrix
 //       in LinearAlgebra traits
