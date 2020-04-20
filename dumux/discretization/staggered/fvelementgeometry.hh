@@ -29,6 +29,32 @@
 
 namespace Dumux {
 
+template<class GG, bool cachingEnabled>
+class FaceStaggeredFVElementGeometry : public CCTpfaFVElementGeometry<GG, true>
+{
+    using ParentType = CCTpfaFVElementGeometry<GG, true>;
+
+public:
+    //! export type of subcontrol volume face
+    using SubControlVolumeFace = typename GG::SubControlVolumeFace;
+
+    using ParentType::ParentType;
+
+    //! Constructor getting a auxiliary cell center of face specific FvGridGeometry type.
+    //! Needed for the multi-domain framework.
+    template<class ActualGridGeometry, class Traits>
+    FaceStaggeredFVElementGeometry(const FaceFVGridGeometry<ActualGridGeometry, Traits>& faceGridGeometry)
+    : ParentType(faceGridGeometry.actualGridGeometry()) {}
+
+    // //! Get a sub control volume face with an element index and a local scvf index
+    // using ParentType::scvf;
+    // const SubControlVolumeFace& scvf(GridIndexType eIdx, LocalIndexType localScvfIdx) const
+    // {
+    //     return this->gridGeometry().scvf(eIdx, localScvfIdx);
+    // }
+
+};
+
 /*!
  * \ingroup StaggeredDiscretization
  * \brief Stencil-local finite volume geometry (scvs and scvfs) for staggered models
@@ -64,9 +90,20 @@ public:
 
     //! Constructor getting a auxiliary cell center of face specific FvGridGeometry type.
     //! Needed for the multi-domain framework.
-    template<class CellCenterOrFaceFVGridGeometry>
-    StaggeredFVElementGeometry(const CellCenterOrFaceFVGridGeometry& gridGeometry)
+
+
+    StaggeredFVElementGeometry(const GG& gridGeometry)
+    : ParentType(gridGeometry) {}
+
+    StaggeredFVElementGeometry(const typename GG::CellCenterFVGridGeometryType& gridGeometry)
     : ParentType(gridGeometry.actualGridGeometry()) {}
+
+    StaggeredFVElementGeometry(const typename GG::FaceFVGridGeometryType& gridGeometry)
+    : ParentType(gridGeometry.actualGridGeometry()) {}
+
+
+    // StaggeredFVElementGeometry(const CellCenterOrFaceFVGridGeometry& gridGeometry)
+    // : ParentType(gridGeometry.actualGridGeometry()) {}
 
     //! Get a sub control volume face with an element index and a local scvf index
     using ParentType::scvf;

@@ -137,18 +137,47 @@ public:
  * \brief Face specific auxiliary FvGridGeometry classes.
  *        Required for the Dumux multi-domain framework.
  */
-template <class ActualGridGeometry>
+template <class ActualGridGeometry,  class Traits>
 class FaceFVGridGeometry : public GridGeometryView<ActualGridGeometry>
 {
     using ParentType = GridGeometryView<ActualGridGeometry>;
+    using ThisType = FaceFVGridGeometry<ActualGridGeometry, Traits>;
+    using GridIndexType = typename IndexTraits<typename ActualGridGeometry::GridView>::GridIndex;
+    using LocalIndexType = typename IndexTraits<typename ActualGridGeometry::GridView>::LocalIndex;
 public:
 
     using ParentType::ParentType;
+
+    //! export the type of sub control volume
+    using SubControlVolume = typename Traits::SubControlVolume;
+    //! export the type of sub control volume
+    using SubControlVolumeFace = typename Traits::SubControlVolumeFace;
+    //! export the grid view type
+    using GridView = typename ActualGridGeometry::GridView;
+
+    //! export the type of the fv element geometry (the local view type)
+    using LocalView = typename Traits::template StaggeredLocalView<ThisType, true>;
+
+    // static constexpr auto  fu = LocalView::fu();
 
     /*!
      * \brief Returns true because this view is related to face dofs
      */
     static constexpr bool isFace() {return true; }
+
+    //! Get the sub control volume face indices of an scv by global index
+    const auto& scvfIndicesOfScv(GridIndexType scvIdx) const
+    { return this->gridGeometry_->scvfIndicesOfScv(scvIdx); }
+
+    //! Get a sub control volume face with a global scvf index
+    const SubControlVolumeFace& scvf(GridIndexType scvfIdx) const
+    { return this->gridGeometry_->scvf(scvfIdx); }
+
+    GridIndexType localToGlobalScvfIndex(GridIndexType eIdx, LocalIndexType localScvfIdx) const
+    { return this->gridGeometry_->localToGlobalScvfIndex(eIdx, localScvfIdx); }
+
+    const SubControlVolumeFace& scvf(GridIndexType eIdx, LocalIndexType localScvfIdx) const
+    { return scvf(localToGlobalScvfIndex(eIdx, localScvfIdx)); }
 
     /*!
      * \brief The total number of cell centered dofs
@@ -218,9 +247,9 @@ public:
     {   return upwindSchemeOrder; }
 
     using CellCenterFVGridGeometryType = CellCenterFVGridGeometry<ThisType>;
-    using FaceFVGridGeometryType = FaceFVGridGeometry<ThisType>;
+    using FaceFVGridGeometryType = FaceFVGridGeometry<ThisType, Traits>;
 
-    using FVGridGeometryTuple = std::tuple< CellCenterFVGridGeometry<ThisType>, FaceFVGridGeometry<ThisType> >;
+    using FVGridGeometryTuple = std::tuple< CellCenterFVGridGeometry<ThisType>, FaceFVGridGeometry<ThisType, Traits> >;
 
     //! Constructor
     StaggeredFVGridGeometry(const GridView& gridView, const std::string& paramGroup = "")
@@ -391,9 +420,9 @@ public:
     }
 
     //! Returns a pointer the face specific auxiliary class. Required for the multi-domain FVAssembler's ctor.
-    std::unique_ptr<FaceFVGridGeometry<ThisType>> faceFVGridGeometryPtr() const
+    std::unique_ptr<FaceFVGridGeometry<ThisType, Traits>> faceFVGridGeometryPtr() const
     {
-        return std::make_unique<FaceFVGridGeometry<ThisType>>(this);
+        return std::make_unique<FaceFVGridGeometry<ThisType, Traits>>(this);
     }
 
     //! Return a copy of the cell center specific auxiliary class.
@@ -403,9 +432,9 @@ public:
     }
 
     //! Return a copy of the face specific auxiliary class.
-    FaceFVGridGeometry<ThisType> faceFVGridGeometry() const
+    FaceFVGridGeometry<ThisType, Traits> faceFVGridGeometry() const
     {
-        return FaceFVGridGeometry<ThisType>(this);
+        return FaceFVGridGeometry<ThisType, Traits>(this);
     }
 
     //! Returns whether one of the geometry's scvfs lies on a boundary
@@ -477,9 +506,9 @@ public:
     {   return upwindSchemeOrder; }
 
     using CellCenterFVGridGeometryType = CellCenterFVGridGeometry<ThisType>;
-    using FaceFVGridGeometryType = FaceFVGridGeometry<ThisType>;
+    using FaceFVGridGeometryType = FaceFVGridGeometry<ThisType, Traits>;
 
-    using FVGridGeometryTuple = std::tuple< CellCenterFVGridGeometry<ThisType>, FaceFVGridGeometry<ThisType> >;
+    using FVGridGeometryTuple = std::tuple< CellCenterFVGridGeometry<ThisType>, FaceFVGridGeometry<ThisType, Traits> >;
 
     //! Constructor
     StaggeredFVGridGeometry(const GridView& gridView, const std::string& paramGroup = "")
@@ -601,9 +630,9 @@ public:
     }
 
     //! Returns a pointer the face specific auxiliary class. Required for the multi-domain FVAssembler's ctor.
-    std::unique_ptr<FaceFVGridGeometry<ThisType>> faceFVGridGeometryPtr() const
+    std::unique_ptr<FaceFVGridGeometry<ThisType, Traits>> faceFVGridGeometryPtr() const
     {
-        return std::make_unique<FaceFVGridGeometry<ThisType>>(this);
+        return std::make_unique<FaceFVGridGeometry<ThisType, Traits>>(this);
     }
 
     //! Return a copy of the cell center specific auxiliary class.
@@ -613,9 +642,9 @@ public:
     }
 
     //! Return a copy of the face specific auxiliary class.
-    FaceFVGridGeometry<ThisType> faceFVGridGeometry() const
+    FaceFVGridGeometry<ThisType, Traits> faceFVGridGeometry() const
     {
-        return FaceFVGridGeometry<ThisType>(this);
+        return FaceFVGridGeometry<ThisType, Traits>(this);
     }
 
     //! Return a reference to the intersection mapper

@@ -60,6 +60,9 @@ struct StaggeredFreeFlowDefaultFVGridGeometryTraits
 
     template<class GridGeometry, bool cachingEnabled>
     using LocalView = StaggeredFVElementGeometry<GridGeometry, cachingEnabled>;
+
+    template<class GridGeometry, bool cachingEnabled>
+    using StaggeredLocalView = FaceStaggeredFVElementGeometry<GridGeometry, cachingEnabled>;
 };
 
 } //end namespace Dumux
