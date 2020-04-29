@@ -35,6 +35,8 @@
 #include <dumux/discretization/staggered/freeflow/properties.hh>
 #include <dumux/freeflow/navierstokes/model.hh>
 
+#include <dumux/freeflow/navierstokes/fluxhelper.hh>
+
 namespace Dumux {
 template <class TypeTag>
 class ChannelTestProblem;
@@ -113,7 +115,10 @@ class ChannelTestProblem : public NavierStokesProblem<TypeTag>
     {
         outflow, doNothing, neumannXdirichletY, neumannXneumannY
     };
-
+    using ModelTraits = GetPropType<TypeTag, Properties::ModelTraits>;
+    using FluxHelper = NavierStokes::NavierStokesAdvectiveFluxHelper<ModelTraits,
+                                                                     ModelTraits::enableEnergyBalance(),
+                                                                    (ModelTraits::numFluidComponents() > 1)>;
 public:
     ChannelTestProblem(std::shared_ptr<const GridGeometry> gridGeometry)
     : ParentType(gridGeometry)
@@ -188,7 +193,7 @@ public:
                 values.setNeumann(Indices::momentumXBalanceIdx);
             }
 #if NONISOTHERMAL
-            values.setOutflow(Indices::energyEqIdx);
+            values.setNeumann(Indices::energyEqIdx);
 #endif
         }
         else
@@ -252,6 +257,9 @@ public:
 
         if (outletCondition_ != OutletCondition::doNothing)
             values[1] = -dudy(scvf.center()[1], inletVelocity_) * elemVolVars[scvf.insideScvIdx()].viscosity();
+
+        if(isOutlet_(scvf.center()))
+            FluxHelper::advectiveEnergyFlux(values, elemVolVars[scvf.insideScvIdx()], elemVolVars[scvf.insideScvIdx()], scvf, elemFaceVars[scvf].velocitySelf(), 1.0);
 
         return values;
     }
