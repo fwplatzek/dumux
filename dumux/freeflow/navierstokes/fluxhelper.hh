@@ -90,14 +90,13 @@ public:
                                     const Scalar velocity,
                                     const Scalar upwindWeight)
     {
-        static constexpr auto localEnergyBalanceIdx = NumEqVector::dimension - 1;
         auto upwindTerm = [](const auto& volVars) { return volVars.density() * volVars.enthalpy(); };
-        flux[localEnergyBalanceIdx] += advectiveUpwindFlux(insideVolVars,
-                                                           outsideVolVars,
-                                                           scvf,
-                                                           velocity,
-                                                           upwindWeight,
-                                                           upwindTerm);
+        flux[Traits::Indices::energyEqIdx] += advectiveUpwindFlux(insideVolVars,
+                                                                  outsideVolVars,
+                                                                  scvf,
+                                                                  velocity,
+                                                                  upwindWeight,
+                                                                  upwindTerm);
     }
 
     template <bool enable = isCompositional, typename std::enable_if_t<!enable, int> = 0,
@@ -110,12 +109,12 @@ public:
                                 const Scalar upwindWeight)
     {
         auto upwindTerm = [](const auto& volVars) { return volVars.density(); };
-        flux[Traits::Indices::conti0EqIdx - Traits::dim()] = advectiveUpwindFlux(insideVolVars,
-                                                                                 outsideVolVars,
-                                                                                 scvf,
-                                                                                 velocity,
-                                                                                 upwindWeight,
-                                                                                 upwindTerm);
+        flux[Traits::Indices::conti0EqIdx] = advectiveUpwindFlux(insideVolVars,
+                                                                 outsideVolVars,
+                                                                 scvf,
+                                                                 velocity,
+                                                                 upwindWeight,
+                                                                 upwindTerm);
     }
 
     template <bool enable = isCompositional, typename std::enable_if_t<enable, int> = 0,
@@ -139,18 +138,18 @@ public:
                 return density * fraction;
             };
 
-            flux[compIdx] = advectiveUpwindFlux(insideVolVars,
-                                                outsideVolVars,
-                                                scvf,
-                                                velocity,
-                                                upwindWeight,
-                                                upwindTerm);
+            flux[Traits::Indices::conti0EqIdx + compIdx] = advectiveUpwindFlux(insideVolVars,
+                                                                   outsideVolVars,
+                                                                   scvf,
+                                                                   velocity,
+                                                                   upwindWeight,
+                                                                   upwindTerm);
         }
 
         // in case one balance is substituted by the total mass balance
         if (Traits::replaceCompEqIdx() < numComponents)
         {
-            flux[Traits::replaceCompEqIdx()] = std::accumulate(flux.begin(), flux.end(), 0.0);
+            flux[Traits::Indices::conti0EqIdx + Traits::replaceCompEqIdx()] = std::accumulate(flux.begin(), flux.end(), 0.0);
         }
     }
 
@@ -170,6 +169,7 @@ public:
         const Scalar flux = (upwindWeight * upwindTerm(upstreamVolVars) +
                             (1.0 - upwindWeight) * upwindTerm(downstreamVolVars))
                             * velocity * scvf.directionSign();
+
         return flux;
     }
 };
