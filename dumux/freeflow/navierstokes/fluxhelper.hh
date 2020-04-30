@@ -21,30 +21,68 @@
 #define DUMUX_NAVIERSTOKES_FLUXHELPER_HH
 
 #include <dumux/common/math.hh>
+#include <dumux/discretization/staggered/elementsolution.hh>
 
 namespace Dumux {
 namespace NavierStokes {
 
-template<class Traits, bool enableEneryBalance, bool isCompositional>
-struct NavierStokesAdvectiveFluxHelper
+template<class Traits, class NumEqVector>
+class NavierStokesAdvectiveFluxHelper
 {
-    template<class NumEqVector, class VolumeVariables, class SubControlVolumeFace, class Scalar>
-    static void advectiveFlux(NumEqVector& flux,
-                              const VolumeVariables& insideVolVars,
-                              const VolumeVariables& outsideVolVars,
-                              const SubControlVolumeFace& scvf,
-                              const Scalar velocity,
-                              const Scalar upwindWeight)
+    static constexpr bool enableEneryBalance = Traits::enableEnergyBalance();
+    static constexpr bool isCompositional = (Traits::numFluidComponents() > 1);
+
+public:
+    template<class VolumeVariables, class SubControlVolumeFace, class Scalar>
+    static NumEqVector outflowFlux(const VolumeVariables& insideVolVars,
+                                   const VolumeVariables& outsideVolVars,
+                                   const SubControlVolumeFace& scvf,
+                                   const Scalar velocity,
+                                   const Scalar upwindWeight)
     {
-        advectiveEnergyFlux(flux, insideVolVars, outsideVolVars, velocity, scvf, upwindWeight);
-        advectiveMassFlux(flux, insideVolVars, outsideVolVars, velocity, scvf, upwindWeight);
+        return advectiveFlux(insideVolVars, outsideVolVars, scvf, velocity, upwindWeight);
+    }
+
+    template<class Problem, class Element, class FVElementGeometry, class VolumeVariables, class Scalar>
+    static NumEqVector outflowFlux(const Problem& problem,
+                                   const Element& element,
+                                   const FVElementGeometry& fvGeometry,
+                                   const VolumeVariables& insideVolVars,
+                                   typename VolumeVariables::PrimaryVariables boundaryPriVars,
+                                   const typename FVElementGeometry::SubControlVolumeFace& scvf,
+                                   const Scalar velocity,
+                                   const Scalar upwindWeight)
+    {
+        const auto elemSol = elementSolution<FVElementGeometry>(std::move(boundaryPriVars));
+        VolumeVariables boundaryVolVars;
+        boundaryVolVars.update(elemSol,
+                               problem,
+                               element,
+                               fvGeometry.scv(problem.gridGeometry().elementMapper().index(element)));
+
+        return outflowFlux(insideVolVars, boundaryVolVars, scvf, velocity, upwindWeight);
+    }
+
+
+    template<class VolumeVariables, class SubControlVolumeFace, class Scalar>
+    static NumEqVector advectiveFlux(const VolumeVariables& insideVolVars,
+                                     const VolumeVariables& outsideVolVars,
+                                     const SubControlVolumeFace& scvf,
+                                     const Scalar velocity,
+                                     const Scalar upwindWeight)
+    {
+        NumEqVector flux(0.0);
+        advectiveEnergyFlux(flux, insideVolVars, outsideVolVars, scvf, velocity, upwindWeight);
+        advectiveMassFlux(flux, insideVolVars, outsideVolVars, scvf, velocity, upwindWeight);
+
+        return flux;
     }
 
     template <bool enable = enableEneryBalance, typename std::enable_if_t<!enable, int> = 0, class ...Args>
-    static void advectiveEnergyFlux(Args&&... args) {}
+    static void advectiveEnergyFlux(NumEqVector& flux, Args&&... args) {}
 
     template <bool enable = enableEneryBalance, typename std::enable_if_t<enable, int> = 0,
-              class NumEqVector, class VolumeVariables, class SubControlVolumeFace, class Scalar>
+              class VolumeVariables, class SubControlVolumeFace, class Scalar>
     static void advectiveEnergyFlux(NumEqVector& flux,
                                     const VolumeVariables& insideVolVars,
                                     const VolumeVariables& outsideVolVars,
@@ -63,7 +101,7 @@ struct NavierStokesAdvectiveFluxHelper
     }
 
     template <bool enable = isCompositional, typename std::enable_if_t<!enable, int> = 0,
-              class NumEqVector, class VolumeVariables, class SubControlVolumeFace, class Scalar>
+              class VolumeVariables, class SubControlVolumeFace, class Scalar>
     static void advectiveMassFlux(NumEqVector& flux,
                                 const VolumeVariables& insideVolVars,
                                 const VolumeVariables& outsideVolVars,
@@ -81,7 +119,7 @@ struct NavierStokesAdvectiveFluxHelper
     }
 
     template <bool enable = isCompositional, typename std::enable_if_t<enable, int> = 0,
-              class NumEqVector, class VolumeVariables, class SubControlVolumeFace, class Scalar>
+              class VolumeVariables, class SubControlVolumeFace, class Scalar>
     static void advectiveMassFlux(NumEqVector& flux,
                                   const VolumeVariables& insideVolVars,
                                   const VolumeVariables& outsideVolVars,
@@ -134,7 +172,6 @@ struct NavierStokesAdvectiveFluxHelper
                             * velocity * scvf.directionSign();
         return flux;
     }
-
 };
 
 } // end namespace NavierStokes
